@@ -47,20 +47,32 @@ func main() {
 func loadTasks() {
 	data, err := os.ReadFile(tasksFile)
 	if err != nil {
-		return // It's okay if the file doesn't exist yet
+		if os.IsNotExist(err) {
+			fmt.Println("Tasks file does not exist yet")
+		} else {
+			fmt.Println("Error reading tasks file:", err)
+		}
+		return
 	}
-	json.Unmarshal(data, &tasks)
+	err = json.Unmarshal(data, &tasks)
+	if err != nil {
+		fmt.Println("Error parsing tasks:", err)
+	} else {
+		fmt.Printf("Loaded %d tasks\n", len(tasks))
+	}
 }
 
 func saveTasks() {
 	data, err := json.Marshal(tasks)
 	if err != nil {
-		fmt.Println("Error saving tasks:", err)
+		fmt.Println("Error marshaling tasks:", err)
 		return
 	}
 	err = os.WriteFile(tasksFile, data, 0644)
 	if err != nil {
-		fmt.Println("Error writing to file:", err)
+		fmt.Println("Error writing tasks file:", err)
+	} else {
+		fmt.Println("Tasks saved successfully")
 	}
 }
 
