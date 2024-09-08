@@ -1,36 +1,39 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
+	"strconv"
 
 	"github.com/urfave/cli/v2"
 )
 
 var tasks []string
 
+const tasksFile = "tasks.json"
+
 func main() {
+	loadTasks()
+
 	app := &cli.App{
 		Name:  "todo",
-		Usage: "A simple CLI To-Do List application",
+		Usage: "A simple CLI todo list manager",
 		Commands: []*cli.Command{
 			{
-				Name:    "add",
-				Aliases: []string{"a"},
-				Usage:   "Add a task to the list",
-				Action:  addTask,
+				Name:   "add",
+				Usage:  "Add a new task",
+				Action: addTask,
 			},
 			{
-				Name:    "list",
-				Aliases: []string{"l"},
-				Usage:   "List all tasks",
-				Action:  listTasks,
+				Name:   "list",
+				Usage:  "List all tasks",
+				Action: listTasks,
 			},
 			{
-				Name:    "remove",
-				Aliases: []string{"r"},
-				Usage:   "Remove a task from the list",
-				Action:  removeTask,
+				Name:   "remove",
+				Usage:  "Remove a task",
+				Action: removeTask,
 			},
 		},
 	}
@@ -41,12 +44,33 @@ func main() {
 	}
 }
 
+func loadTasks() {
+	data, err := os.ReadFile(tasksFile)
+	if err != nil {
+		return // It's okay if the file doesn't exist yet
+	}
+	json.Unmarshal(data, &tasks)
+}
+
+func saveTasks() {
+	data, err := json.Marshal(tasks)
+	if err != nil {
+		fmt.Println("Error saving tasks:", err)
+		return
+	}
+	err = os.WriteFile(tasksFile, data, 0644)
+	if err != nil {
+		fmt.Println("Error writing to file:", err)
+	}
+}
+
 func addTask(c *cli.Context) error {
 	if c.NArg() == 0 {
-		return fmt.Errorf("please provide a task to add")
+		return fmt.Errorf("please provide a task description")
 	}
 	task := c.Args().First()
 	tasks = append(tasks, task)
+	saveTasks()
 	fmt.Printf("Task added: %s\n", task)
 	return nil
 }
@@ -66,8 +90,17 @@ func removeTask(c *cli.Context) error {
 	if c.NArg() == 0 {
 		return fmt.Errorf("please provide a task number to remove")
 	}
-	index := c.Args().First()
-	// Implementation for removing a task
-	fmt.Printf("Task removed: %s\n", index)
+	index, err := strconv.Atoi(c.Args().First())
+	if err != nil {
+		return fmt.Errorf("invalid task number: %v", err)
+	}
+	index-- // Adjust for 0-based indexing
+	if index < 0 || index >= len(tasks) {
+		return fmt.Errorf("task number out of range")
+	}
+	removedTask := tasks[index]
+	tasks = append(tasks[:index], tasks[index+1:]...)
+	saveTasks()
+	fmt.Printf("Task removed: %s\n", removedTask)
 	return nil
 }
