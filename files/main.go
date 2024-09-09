@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 
 	"github.com/urfave/cli/v2"
 )
@@ -15,22 +16,22 @@ func main() {
 		Usage: "A CLI tool for managing JSON files",
 		Commands: []*cli.Command{
 			{
-				Name:   "upload",
-				Usage:  "Upload a JSON file",
+				Name:      "upload",
+				Usage:     "Upload a JSON file",
 				ArgsUsage: "[source_file] [destination_file]",
-				Action: uploadFile,
+				Action:    uploadFile,
 			},
 			{
-				Name:   "download",
-				Usage:  "Download a JSON file",
-				ArgsUsage: "[source_file] [destination_file]",
-				Action: downloadFile,
+				Name:      "download",
+				Usage:     "Download a JSON file",
+				ArgsUsage: "[source_file]",
+				Action:    downloadFile,
 			},
 			{
-				Name:   "delete",
-				Usage:  "Delete a file",
+				Name:      "delete",
+				Usage:     "Delete a file",
 				ArgsUsage: "[file_path]",
-				Action: deleteFile,
+				Action:    deleteFile,
 			},
 		},
 	}
@@ -41,7 +42,6 @@ func main() {
 	}
 }
 
-// JSON faylga ma'lumot saqlash
 func uploadFile(c *cli.Context) error {
 	if c.NArg() != 2 {
 		return fmt.Errorf("please provide source and destination file paths")
@@ -69,7 +69,7 @@ func uploadFile(c *cli.Context) error {
 	defer dstFile.Close()
 
 	encoder := json.NewEncoder(dstFile)
-	encoder.SetIndent("", "  ") 
+	encoder.SetIndent("", "  ")
 	err = encoder.Encode(data)
 	if err != nil {
 		return fmt.Errorf("error encoding JSON: %v", err)
@@ -80,11 +80,17 @@ func uploadFile(c *cli.Context) error {
 }
 
 func downloadFile(c *cli.Context) error {
-	if c.NArg() != 2 {
-		return fmt.Errorf("please provide source and destination file paths")
+	if c.NArg() != 1 {
+		return fmt.Errorf("please provide the source file path")
 	}
 	source := c.Args().Get(0)
-	destination := c.Args().Get(1)
+
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("could not get home directory: %v", err)
+	}
+
+	destination := filepath.Join(homeDir, "Downloads", filepath.Base(source))
 
 	srcFile, err := os.Open(source)
 	if err != nil {
@@ -103,7 +109,7 @@ func downloadFile(c *cli.Context) error {
 		return fmt.Errorf("error copying file: %v", err)
 	}
 
-	fmt.Printf("File downloaded successfully: %s to %s\n", source, destination)
+	fmt.Printf("File downloaded successfully to: %s\n", destination)
 	return nil
 }
 
